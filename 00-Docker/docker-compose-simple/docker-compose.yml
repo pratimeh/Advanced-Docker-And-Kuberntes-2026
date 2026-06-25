@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    networks:
+      - frontend
+    ports:
+      - "8080:80"
+
+  textserver:
+    image: alpine:latest
+    container_name: textserver
+    command: tail -f /data/message.txt
+    volumes:
+      - ./backend/message.txt:/data/message.txt
+    networks:
+      - backend
+
+networks:
+  frontend:
+  backend:
