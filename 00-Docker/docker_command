@@ -1,0 +1,6 @@
+Simple Nginx:
+docker login --username pratimeh
+docker build  --tag pratimeh/nginx .
+docker images
+docker push pratimeh/nginx
+docker run -d --name nginx-simple -p 8080:80 pratimeh/nginx
