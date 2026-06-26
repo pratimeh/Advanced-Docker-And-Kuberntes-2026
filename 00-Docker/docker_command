@@ -4,3 +4,33 @@ docker build  --tag pratimeh/nginx .
 docker images
 docker push pratimeh/nginx
 docker run -d --name nginx-simple -p 8080:80 pratimeh/nginx
+
+
+Docker Volume with pgdata:
+docker volume create pgdata
+docker run -v pgdata:/var/lib/postgresql/data \
+  -e POSTGRES_PASSWORD=DockerTraining@12345 \
+  postgres:15-alpine
+docker exec -it <container_id> psql -U postgres
+CREATE DATABASE acciondb;
+CREATE TABLE employees (
+  id     SERIAL PRIMARY KEY,
+  name   VARCHAR(100) NOT NULL,
+  role   VARCHAR(50)
+);
+INSERT INTO employees (name, role) VALUES
+  ('Pratik Mehta',  'Senior SRE'),
+  ('Dinabandhu Panda',    'DevOps Engineer');
+SELECT * FROM employees;
+docker stop <container_id>
+docker rm <container_id>
+docker run -v pgdata:/var/lib/postgresql/data \
+  -e POSTGRES_PASSWORD=DockerTraining@12345 \
+  postgres:15-alpine
+docker exec -it <container_id_new> psql -U postgres
+SELECT * FROM employees;
+Clean the container.
+Delete the volume.
+
+
+
