@@ -1,0 +1,54 @@
+# adapter-pod.yaml
+# Pattern: Main container (nginx) writes logs to a shared volume
+# Adapter container reads those logs, transforms, and exposes them
+apiVersion: v1
+kind: Pod
+metadata:
+  name: adapter-pod
+  labels:
+    app: adapter-pod
+spec:
+  containers:
+    # Main container — nginx writes access logs to shared volume
+    - name: nginx
+      image: nginx:1.25.3
+      imagePullPolicy: Always
+      ports:
+        - containerPort: 80
+      volumeMounts:
+        - name: shared-logs
+          mountPath: /var/log/nginx
+
+    # Adapter container — reads nginx logs and transforms them into
+    # a standardized format (prepends timestamp + log level)
+    - name: adapter
+      image: busybox
+      command:
+        - /bin/sh
+        - -c
+        - |
+          echo "Adapter started. Watching nginx logs..."
+          tail -F /var/log/nginx/access.log 2>/dev/null | while read line; do
+            echo "[$(date '+%Y-%m-%dT%H:%M:%S')] [INFO] [nginx] $line"
+          done
+      volumeMounts:
+        - name: shared-logs
+          mountPath: /var/log/nginx
+
+  volumes:
+    - name: shared-logs
+      emptyDir: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: adapter-clusterip
+spec:
+  type: ClusterIP
+  selector:
+    app: adapter-pod
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80

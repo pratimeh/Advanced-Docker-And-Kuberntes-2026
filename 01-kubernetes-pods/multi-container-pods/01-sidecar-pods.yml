@@ -1,43 +1,52 @@
-# Update the version in git repo and refresh html without redeploying the changes
-
+# nginx-sidecar-simple.yaml
+# Pattern: Sidecar monitors nginx over localhost (shared network namespace)
+# No shared volume needed — containers talk via localhost
 apiVersion: v1
 kind: Pod
 metadata:
-  name: git-sync
+  name: nginx-sidecar-simple
   labels:
-    app: sidecar-pods-example
+    app: nginx-sidecar-simple
 spec:
   containers:
-    - name: ctr-webpage
-      image: nginx
-      volumeMounts:
-        - name: html
-          mountPath: /usr/share/nginx/
-    - name: ctr-sync
-      image: k8s.gcr.io/git-sync:v3.1.6
-      volumeMounts:
-        - name: html
-          mountPath: /tmp/git
-      env:
-        - name: GIT_SYNC_REPO
-          value: https://github.com/jstobigdata/sample-html.git
-        - name: GIT_SYNC_BRANCH
-          value: main
-        - name: GIT_SYNC_DEPTH
-          value: "1"
-        - name: GIT_SYNC_DEST
-          value: "html"
-  volumes:
-    - name: html
-      emptyDir: {}
+    # Main container — nginx running on port 80
+    - name: nginx
+      image: nginx:1.25.3
+      imagePullPolicy: Always
+      ports:
+        - containerPort: 80
+
+    # Sidecar container — hits nginx on localhost:80 every 10 seconds
+    # and logs the HTTP status. No volume, just shared localhost.
+    - name: monitor
+      image: busybox
+      command:
+        - /bin/sh
+        - -c
+        - |
+          echo "Monitor sidecar started. Polling nginx on localhost:80..."
+          while true; do
+            STATUS=$(wget -q -O /dev/null -S http://localhost:80 2>&1 | grep "HTTP/" | awk '{print $2}')
+            TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+            if [ "$STATUS" = "200" ]; then
+              echo "[$TIMESTAMP] nginx is UP — HTTP $STATUS"
+            else
+              echo "[$TIMESTAMP] nginx is DOWN or unreachable — HTTP $STATUS"
+            fi
+            sleep 10
+          done
+
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: svc-sidecar
+  name: nginx-sidecar-simple-svc
 spec:
+  type: NodePort
   selector:
-    app: sidecar-pods-example
+    app: nginx-sidecar-simple
   ports:
-    - port: 80
-  type: LoadBalancer
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+      nodePort: 30082
