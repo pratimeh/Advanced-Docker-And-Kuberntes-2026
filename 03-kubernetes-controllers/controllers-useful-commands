@@ -1,0 +1,38 @@
+Replicaset:
+kubectl get rs
+kubectl scale rs <replicaset> --replicas=5
+
+Deployments:
+kubectl set image deployment/nginx-deployment nginx=nginx:1.27
+kubectl rollout status deployment/nginx-deployment
+#Roll back to the previous version
+kubectl rollout undo deployment/nginx-deployment
+kubectl rollout history deployment/nginx-deployment
+kubectl scale deployment nginx-deployment --replicas=5
+
+Daemonsets:
+minikube node add
+kubectl get pods -l app=nginx -o wide
+minikube node delete m02
+kubectl get pods -l app=nginx -o wide
+
+HPA:
+minikube addons enable metrics-server
+kubectl apply -f nginx-hpa.yaml
+kubectl get hpa
+kubectl get hpa --watch
+kubectl patch deployment metrics-server -n kube-system \
+  --type='json' \
+  -p='[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]'
+kubectl rollout status deployment/metrics-server -n kube-system
+kubectl run load-gen --image=busybox --restart=Never -it --rm \
+  -- /bin/sh -c "while true; do wget -q -O- http://nginx-svc; done"
+kubectl get hpa --watch
+kubectl get pods -l app=nginx --watch
+Stop the load gen container.
+# Replica count climbs toward 5 as CPU crosses 50%
+
+Statefulsets:
+kubectl scale statefulset nginx-statefulset --replicas=1
+
+
